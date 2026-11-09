@@ -1,4 +1,4 @@
-# 🧱 Breakout
+# 🧱 Breakout Game
 
 A classic brick-breaker game built with **React + TypeScript**: smooth `requestAnimationFrame` game loop, canvas particle effects and a responsive board.
 
