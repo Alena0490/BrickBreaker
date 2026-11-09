@@ -2,7 +2,7 @@
 
 A classic brick-breaker game built with **React + TypeScript**: smooth `requestAnimationFrame` game loop, canvas particle effects and a responsive board.
 
-🎮 **[Play the live demo](https://YOUR-DEMO-URL.example.com)**
+🎮 **[Play the live demo](https://alena0490.github.io/BrickBreaker/)**
 
 ![Gameplay screenshot](./brick-breaker.png)
 
