@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import useSound from './hooks/useSound'
 import { createBricks } from '../data/brickData'
 import Paddle from './Paddle'
 import Ball from './Ball'
@@ -6,10 +7,11 @@ import Brick from './Brick'
 import { checkBallBrickCollisions, buildBrickRectCache } from '../utils/collision'
 
 type GameboardProps = {
-  speed: number
-  score: number
-  setLives: (lives: number) => void
-  setScore: (score: number) => void
+  speed: number;
+  score: number;
+  setLives: (lives: number) => void;
+  setScore: (score: number) => void;
+  soundEnabled: boolean;
 }
 
 type Status = 'ready' | 'playing' | 'paused' | 'over' | 'win'
@@ -48,10 +50,11 @@ const MAX_DT = 3
 type Particle = { x: number; y: number; life: number }
 type Debris = { x: number; y: number; vx: number; vy: number; life: number; color: string }
 
-const Gameboard = ({ speed, score, setLives, setScore }: GameboardProps) => {
+const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: GameboardProps) => {
   const [bricks, setBricks] = useState(createBricks)
-  const [status, setStatus] = useState<Status>('ready')
+  const [status, setStatus] = useState<Status>('ready');
 
+  const { playWin, playBrickHit, playPaddleHit, playLose } = useSound({ soundEnabled })
   const boardRef = useRef<HTMLDivElement>(null)
   const paddleRef = useRef<HTMLDivElement>(null)
   const ballRef = useRef<HTMLDivElement>(null)
@@ -286,6 +289,7 @@ const Gameboard = ({ speed, score, setLives, setScore }: GameboardProps) => {
         setLives(livesRef.current)
         changeStatus(livesRef.current <= 0 ? 'over' : 'ready')
         resetBallToPaddle()
+        if (livesRef.current <=0) {playLose()}
         return
       }
 
@@ -305,15 +309,27 @@ const Gameboard = ({ speed, score, setLives, setScore }: GameboardProps) => {
         setScore(scoreRef.current)
 
         if (bricksStateRef.current.every((brick) => brick.broken)) {
-          changeStatus('win')
+          changeStatus('win');
+          playWin();
         }
+        playBrickHit();
       }
 
-      // Walls
-      if (ballLeft < padLeft) speedX = Math.abs(speedX)
-      if (ballRight > board.clientWidth - padRight) speedX = -Math.abs(speedX)
-      if (ballTop < padTop) speedY = Math.abs(speedY)
+      let bounced = false    
 
+      // Walls
+      if (ballLeft < padLeft) {
+        speedX = Math.abs(speedX)
+        bounced = true  
+      }
+      if (ballRight > board.clientWidth - padRight) {
+        speedX = -Math.abs(speedX)
+        bounced = true  
+      }
+      if (ballTop < padTop) {
+        speedY = Math.abs(speedY)
+        bounced = true  
+      }
       // Paddle collision — reflect angle based on where the ball hits.
       if (
         ballBottom > paddle.offsetTop &&
@@ -326,8 +342,10 @@ const Gameboard = ({ speed, score, setLives, setScore }: GameboardProps) => {
         const hitPos = (ballCenter - paddleCenter) / (paddle.offsetWidth / 2)
         const clamped = hitPos < -1 ? -1 : hitPos > 1 ? 1 : hitPos
         speedY = -Math.abs(speedY)
-        speedX = clamped * Math.abs(speedY)
+        speedX = clamped * Math.abs(speedY);
+        bounced = true
       }
+      if (bounced) playPaddleHit() 
     }
 
     window.addEventListener('keydown', onKeyDown)
@@ -345,7 +363,7 @@ const Gameboard = ({ speed, score, setLives, setScore }: GameboardProps) => {
       window.removeEventListener('resize', onResize)
       cancelAnimationFrame(frameId)
     }
-  }, [setLives, setScore])
+  }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit])
 
   const renderEndOverlay = (label: string, className: string) => (
     <div className="overlay">

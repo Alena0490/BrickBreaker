@@ -75,7 +75,7 @@ body {
   justify-content: center;
   color: #fff;
   font-size: 2.25rem;
-  font-family: 'Oxanium', cursive;
+  font-family: 'Oxanium Variable', sans-serif;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(2px);
 }
@@ -109,7 +109,7 @@ body {
 .overlay button {
   padding: 5px 10px;
   font-size: 1.5rem;
-  font-family: 'Oxanium', cursive;
+  font-family: 'Oxanium Variable', sans-serif;
   font-weight: 600;
   color: var(--background-color);
   background-color: #fff;
@@ -243,7 +243,7 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 25px 0;
-  font-family: 'Oxanium', cursive;
+  font-family: 'Oxanium Variable', sans-serif;
   font-size: 1.5rem;
   font-weight: 600;
 }
@@ -260,7 +260,8 @@ body {
   gap: 8px;
 }
 
-.speed button {
+.speed button,
+.sound-button {
   width: var(--brick-height);
   height: var(--brick-height);
   background-color: #fff;
@@ -268,17 +269,29 @@ body {
   border: none;
   border-radius: var(--brick-radius);
   cursor: pointer;
-  font-family: 'Oxanium', cursive;
+  font-family: 'Oxanium Variable', sans-serif;
   font-size: 1.25rem;
   font-weight: 600;
   box-shadow: inset -2px -2px 2px rgba(0, 0, 0, 0.5);
   transition: transform 0.2s ease-in-out,  box-shadow 0.2s ease-in-out;
 }
 
-.speed button:hover {
+
+
+.speed button:hover,
+.sound-button:hover {
   transform: scale(1.1);
   box-shadow: 0 0 40px var(--cyan-light),
   inset -2px -2px 2px rgba(0, 0, 0, 0.3);
+}
+
+
+.sound-button {
+  width: 37.5px;
+  height: 37.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .life {
