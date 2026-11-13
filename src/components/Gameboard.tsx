@@ -16,8 +16,9 @@ type GameboardProps = {
 
 type Status = 'ready' | 'playing' | 'paused' | 'over' | 'win'
 
+const isTouch = window.matchMedia('(pointer: coarse)').matches
 const statusText: Record<Status, string> = {
-  ready: 'Spacebar / click = start',
+  ready: isTouch ? 'Tap to start' : 'Spacebar / click = start',
   playing: '',
   paused: 'Paused',
   over: 'Game over',
@@ -78,9 +79,6 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
     const ctx = canvas?.getContext('2d')
     if (!board || !paddle || !ball || !canvas || !ctx) return
 
-    canvas.width = board.clientWidth
-    canvas.height = board.clientHeight
-
     const trailColor = getComputedStyle(document.documentElement).getPropertyValue('--cyan-light').trim()
     const brickColorCache = new Map<number, string>()
 
@@ -92,6 +90,8 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
     let padRight = parseFloat(style.paddingRight)
     let padTop = parseFloat(style.paddingTop)
     let lastWidth = board.clientWidth
+    let fxScale = board.clientWidth / 800       // effect scale: 1 = board 800px, 0.5 = board 400px
+    let dpr = window.devicePixelRatio || 1      // pixel density: 1 on desktop, 2–3 on phone
 
     const keys = { left: false, right: false }
     let x = (board.clientWidth - paddle.offsetWidth) / 2
@@ -133,11 +133,11 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
       if (e.key === 'ArrowRight') keys.right = false
     }
 
-    const onMouseDown = () => {
+    const onPointerDown = () => {
       if (statusRef.current === 'ready') changeStatus('playing')
     }
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       const s = statusRef.current
       if (s === 'paused' || s === 'over' || s === 'win') return
       const rect = board.getBoundingClientRect()
@@ -158,9 +158,12 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
       speedY *= scale
       baseSpeed *= scale
       lastWidth = board.clientWidth
+      fxScale = board.clientWidth / 800 
 
-      canvas.width = board.clientWidth
-      canvas.height = board.clientHeight
+      dpr = window.devicePixelRatio || 1
+      canvas.width = board.clientWidth * dpr   
+      canvas.height = board.clientHeight * dpr
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)   
 
       // Layout changed — rebuild cached brick rects.
       rectCache = buildBrickRectCache(brickRefs.current, board)
@@ -170,7 +173,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
     // Avoids allocating a new array via .filter() every frame.
     const updateAndDrawParticles = (dt: number) => {
       let write = 0
-      ctx.shadowBlur = FX.trail.glow
+      ctx.shadowBlur = FX.trail.glow * fxScale * dpr
       ctx.shadowColor = FX.trail.glowColor
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i]
@@ -181,7 +184,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
         ctx.globalAlpha = p.life
         ctx.fillStyle = p.life > FX.trail.headUntil ? FX.trail.headColor : trailColor
         ctx.beginPath()
-        ctx.arc(p.x, p.y, FX.trail.size * p.life, 0, Math.PI * 2)
+        ctx.arc(p.x, p.y, FX.trail.size * p.life * fxScale, 0, Math.PI * 2 )
         ctx.fill()
       }
       particles.length = write
@@ -192,7 +195,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
       let write = 0
       for (let i = 0; i < debris.length; i++) {
         const d = debris[i]
-        d.vy += FX.debris.gravity * dt
+        d.vy += FX.debris.gravity * dt * fxScale
         d.x += d.vx * dt
         d.y += d.vy * dt
         d.life -= FX.debris.fade * dt
@@ -201,7 +204,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
 
         ctx.globalAlpha = d.life
         ctx.fillStyle = d.color
-        ctx.fillRect(d.x, d.y, FX.debris.size, FX.debris.size)
+        ctx.fillRect(d.x, d.y, FX.debris.size * fxScale, FX.debris.size * fxScale)
       }
       debris.length = write
       ctx.globalAlpha = 1
@@ -225,8 +228,8 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
         debris.push({
           x: cx,
           y: cy,
-          vx: (Math.random() - 0.5) * FX.debris.speed,
-          vy: (Math.random() - 0.5) * FX.debris.speed,
+          vx: (Math.random() - 0.5) * FX.debris.speed * fxScale,
+          vy: (Math.random() - 0.5) * FX.debris.speed * fxScale,
           life: 1,
           color,
         })
@@ -350,17 +353,18 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
-    board.addEventListener('mousemove', onMouseMove)
-    board.addEventListener('mousedown', onMouseDown)
-    window.addEventListener('resize', onResize)
+    board.addEventListener('pointermove', onPointerMove)
+    board.addEventListener('pointerdown', onPointerDown)
+    const resizeObserver = new ResizeObserver(onResize)  // calls onResize for every size chage
+    resizeObserver.observe(board)   
     frameId = requestAnimationFrame(loop)
 
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
-      board.removeEventListener('mousemove', onMouseMove)
-      board.removeEventListener('mousedown', onMouseDown)
-      window.removeEventListener('resize', onResize)
+      board.removeEventListener('pointermove', onPointerMove)
+      board.removeEventListener('pointerdown', onPointerDown)
+      resizeObserver.disconnect()   
       cancelAnimationFrame(frameId)
     }
   }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit])

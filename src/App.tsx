@@ -16,6 +16,9 @@ const App = () => {
 
   return (
     <div className="game-container">
+      <div className="game-overlay">
+        <p>Please turn your device</p>
+      </div>
       <Gameboard 
         speed={speed} 
         score={score} 
