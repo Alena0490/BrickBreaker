@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import useSound from './hooks/useSound'
 import { createBricks } from '../data/brickData'
+import type { Status } from '../types/types'
 import Paddle from './Paddle'
 import Ball from './Ball'
 import Brick from './Brick'
@@ -12,17 +13,24 @@ type GameboardProps = {
   setLives: (lives: number) => void;
   setScore: (score: number) => void;
   soundEnabled: boolean;
+  status: Status;
+  setStatus: (ready: Status) => void;
+  
 }
 
-type Status = 'ready' | 'playing' | 'paused' | 'over' | 'win'
-
 const isTouch = window.matchMedia('(pointer: coarse)').matches
-const statusText: Record<Status, string> = {
-  ready: isTouch ? 'Tap to start' : 'Spacebar / click = start',
-  playing: '',
-  paused: 'Paused',
-  over: 'Game over',
-  win: 'You win!',
+const statusText: Record<Status, { title: string; hint?: string }> = {
+  ready: { 
+    title: 'Ready', 
+    hint: isTouch ? 'Tap to start' : 'Click or press Space to start' 
+  },
+  playing: {title: ''},
+  paused: {
+    title: 'Paused', 
+    hint: isTouch ? 'Tap to resume' : 'Click or press Space to resume'
+  },
+  over: {title: 'Game over'},
+  win: {title: 'You win!'},
 }
 
 const FX = {
@@ -51,36 +59,42 @@ const MAX_DT = 3
 type Particle = { x: number; y: number; life: number }
 type Debris = { x: number; y: number; vx: number; vy: number; life: number; color: string }
 
-const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: GameboardProps) => {
+const Gameboard = ({ speed, score, setLives, setScore, soundEnabled, status, setStatus }: GameboardProps) => {
   const [bricks, setBricks] = useState(createBricks)
-  const [status, setStatus] = useState<Status>('ready');
 
-  const { playWin, playBrickHit, playPaddleHit, playLose } = useSound({ soundEnabled })
-  const boardRef = useRef<HTMLDivElement>(null)
-  const paddleRef = useRef<HTMLDivElement>(null)
-  const ballRef = useRef<HTMLDivElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const brickRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
+  const { playWin, playBrickHit, playPaddleHit, playLose } = useSound({ soundEnabled });
+  const boardRef = useRef<HTMLDivElement>(null);
+  const paddleRef = useRef<HTMLDivElement>(null);
+  const ballRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const brickRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
-  const bricksStateRef = useRef(bricks)
-  const livesRef = useRef(3)
-  const scoreRef = useRef(0)
-  const speedRef = useRef(speed)
-  const statusRef = useRef<Status>('ready')
+  const bricksStateRef = useRef(bricks);
+  const livesRef = useRef(3);
+  const scoreRef = useRef(0);
+  const speedRef = useRef(speed);
+  const statusRef = useRef<Status>('ready');
 
-  useEffect(() => { bricksStateRef.current = bricks }, [bricks])
-  useEffect(() => { speedRef.current = speed }, [speed])
+  const changeStatus = useCallback((s: Status) => {
+    statusRef.current = s
+    setStatus(s)
+  }, [setStatus])
+
+  useEffect(() => { bricksStateRef.current = bricks }, [bricks]);
+  useEffect(() => { speedRef.current = speed }, [speed]);
+  useEffect(() => { statusRef.current = status }, [status]);
 
   useEffect(() => {
-    const board = boardRef.current
-    const paddle = paddleRef.current
-    const ball = ballRef.current
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (!board || !paddle || !ball || !canvas || !ctx) return
+    const board = boardRef.current;
+    const paddle = paddleRef.current;
+    const ball = ballRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    const portraitQuery = window.matchMedia('(max-width: 768px) and (orientation: portrait)')
+    if (!board || !paddle || !ball || !canvas || !ctx) return;
 
-    const trailColor = getComputedStyle(document.documentElement).getPropertyValue('--cyan-light').trim()
-    const brickColorCache = new Map<number, string>()
+    const trailColor = getComputedStyle(document.documentElement).getPropertyValue('--cyan-light').trim();
+    const brickColorCache = new Map<number, string>();
 
     const particles: Particle[] = []
     const debris: Debris[] = []
@@ -106,11 +120,6 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
     // Brick rects are static between resizes — build once, invalidate on resize.
     let rectCache = buildBrickRectCache(brickRefs.current, board)
 
-    const changeStatus = (s: Status) => {
-      statusRef.current = s
-      setStatus(s)
-    }
-
     const resetBallToPaddle = () => {
       baseSpeed = board.clientWidth * INITIAL_SPEED_FACTOR
       speedX = baseSpeed * (Math.random() < 0.5 ? -1 : 1)
@@ -133,8 +142,20 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
       if (e.key === 'ArrowRight') keys.right = false
     }
 
-    const onPointerDown = () => {
-      if (statusRef.current === 'ready') changeStatus('playing')
+    const onVisibilityChange = () => {
+      if (statusRef.current === 'playing' &&  document.hidden) { 
+        changeStatus('paused')
+      }
+    };
+
+    const onOrientationChange = () => {
+        if (portraitQuery.matches && statusRef.current === 'playing') {
+          changeStatus('paused')
+        };
+    };
+
+    const onPointerDown = () => { 
+      if (statusRef.current === 'ready' || statusRef.current === 'paused') changeStatus('playing')
     }
 
     const onPointerMove = (e: PointerEvent) => {
@@ -353,6 +374,8 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
+    document.addEventListener('visibilitychange', onVisibilityChange) 
+    portraitQuery.addEventListener('change', onOrientationChange)
     board.addEventListener('pointermove', onPointerMove)
     board.addEventListener('pointerdown', onPointerDown)
     const resizeObserver = new ResizeObserver(onResize)  // calls onResize for every size chage
@@ -362,12 +385,14 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      portraitQuery.removeEventListener('change', onOrientationChange)
       board.removeEventListener('pointermove', onPointerMove)
       board.removeEventListener('pointerdown', onPointerDown)
-      resizeObserver.disconnect()   
+      resizeObserver.disconnect()
       cancelAnimationFrame(frameId)
     }
-  }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit])
+  }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit, changeStatus])
 
   const renderEndOverlay = (label: string, className: string) => (
     <div className="overlay">
@@ -394,10 +419,13 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled }: Gameboard
       <Paddle ref={paddleRef} />
 
       {(status === 'ready' || status === 'paused') && (
-        <div className="overlay">{statusText[status]}</div>
+        <div className="overlay">
+          <span>{statusText[status].title}</span>
+          {statusText[status].hint && <span className="hint">{statusText[status].hint}</span>}
+        </div>
       )}
-      {status === 'over' && renderEndOverlay(statusText.over, 'over')}
-      {status === 'win' && renderEndOverlay(statusText.win, 'win')}
+      {status === 'over' && renderEndOverlay(statusText.over.title, 'over')}
+      {status === 'win' && renderEndOverlay(statusText.win.title, 'win')}
     </div>
   )
 }

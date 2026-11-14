@@ -72,6 +72,7 @@ body {
   align-items: center;
   justify-content: center;
   inset: 0;
+  padding: var(--board-padding);
   background: var(--background-color);
   color: var(--text-color);
   text-align: center;
@@ -81,7 +82,7 @@ body {
 }
 
 .game-container {
-  width: min(100%, calc((100svh - 120px) * 16 / 11));
+  width: min(100%, calc((100svh - 100px) * 16 / 11));
   max-width: 800px;
   margin-inline: auto;
 }
@@ -113,10 +114,12 @@ body {
   gap: 20px;
   align-items: center;
   justify-content: center;
+  padding: var(--board-padding);
   color: #fff;
   font-size: 2.25rem;
   font-family: 'Oxanium Variable', sans-serif;
   background: rgba(0, 0, 0, 0.8);
+  text-align: center;
   backdrop-filter: blur(2px);
 }
 
@@ -128,6 +131,13 @@ body {
 
 .overlay span {
   text-shadow: 0 0 10px #3cd4ec, 0 0 20px var(--purple-middle), 0 0 30px var(--purple-light);
+}
+
+.overlay span.hint {
+  margin-top: -10px;
+  font-size: 1.25rem;
+  text-shadow: none;
+  opacity: 0.8;
 }
 
 .overlay span.over {
@@ -294,6 +304,7 @@ body {
 .game-stats div { 
   display: inline-flex;
   align-items: center;
+  line-height: 1;
 }
 
 .speed {
@@ -309,7 +320,8 @@ body {
 }
 
 .speed button,
-.sound-button {
+.sound-button,
+.pause-button {
   width: var(--brick-height);
   aspect-ratio: 1/1;
   background-color: #fff;
@@ -327,15 +339,32 @@ body {
 
 @media (hover: hover) {
   .speed button:hover,
-  .sound-button:hover {
+  .sound-button:hover,
+  .pause-button:hover,
+  .speed button:focus,
+  .sound-button:focus,
+  .pause-button:focus  {
     transform: scale(1.1);
     box-shadow: 0 0 40px var(--cyan-light),
     inset -2px -2px 2px rgba(0, 0, 0, 0.3);
   }
 }
 
+.pause-button:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
 
-.sound-button {
+.game-buttons {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+.sound-button,
+.pause-button {
   width: 37.5px;
   aspect-ratio: 1/1;
   display: flex;
@@ -361,14 +390,23 @@ body {
 
 @media (max-height: 500px) {
 
+  .game-overlay,
+  .overlay {
+    font-size: clamp(1.5rem, 1.1786rem + 1.4286vw, 2.25rem);
+  }
+
   .overlay button {
     padding: 3px 6px;
     font-size: clamp(1rem, 2vw, 1.5rem);
   }
 
   .game-stats {
-    padding: 15px 0;
+    padding: 15px 0 0 0;
     font-size: clamp(1rem, 2vw, 1.5rem);
+  }
+
+  .overlay span.hint {
+    font-size: clamp(1rem, 2vw, 1.5rem)
   }
 
   .brick,
@@ -402,7 +440,8 @@ body {
               0 0 10px color-mix(in srgb, var(--cyan-light) 40%, transparent);
   }
 
-  .sound-button {
+  .sound-button,
+  .pause-button {
     width: 30.5px;
     height: auto;
     aspect-ratio: 1/1;
