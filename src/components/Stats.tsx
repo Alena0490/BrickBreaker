@@ -15,20 +15,32 @@ type StatsProps = {
 const Stats = ({ lives, score, speed, onSpeedChange, soundEnabled, setSoundEnabled, status, setStatus }: StatsProps) => {
   const hearts = []
   for (let i = 0; i < lives; i++) {
-    hearts.push(<span key={i} className="life">❤️</span>)
+    hearts.push(<span key={i} className="life" aria-hidden={true}>❤️</span>)
   }
 
   return (
     <div className="game-stats">
-      <div className="stat speed">
-        Speed: {speed}
+      <div className="stat speed" role="group" aria-label="Speed controls">
+        <span aria-live="polite">Speed: {speed}</span>
         <div className="buttons">
-          <button className="speed-button" onClick={() => onSpeedChange(-1)}>-</button>
-          <button className="speed-button" onClick={() => onSpeedChange(1)}>+</button>
+          <button
+            className="speed-button"
+            onClick={() => onSpeedChange(-1)}
+            aria-label="Decrease speed"
+          >
+            -
+          </button>
+          <button
+            className="speed-button"
+            onClick={() => onSpeedChange(1)}
+            aria-label="Increase speed"
+          >
+            +
+          </button>
         </div>
       </div>
-      <div>Score: {score}</div>
-      <div>Lives: <span>{hearts}</span></div>
+      <div aria-live="polite">Score: {score}</div>
+      <div aria-label={`Lives: ${lives}`}>Lives: <span>{hearts}</span></div>
       <div className="game-buttons">
         <button
           className="pause-button"
@@ -38,10 +50,11 @@ const Stats = ({ lives, score, speed, onSpeedChange, soundEnabled, setSoundEnabl
         >
           {status === 'playing' ? <HiMiniPause /> : <HiMiniPlay />}
         </button>
-        <button 
-          className="sound-button" 
-          onClick={() => setSoundEnabled(!soundEnabled)} 
-          aria-label="Toggle Sound"
+        <button
+          className="sound-button"
+          onClick={() => setSoundEnabled(!soundEnabled)}
+          aria-label={soundEnabled ? 'Mute sound' : 'Unmute sound'}
+          aria-pressed={!soundEnabled}
         >
           {soundEnabled ? <HiSpeakerWave /> : <HiSpeakerXMark />}
         </button>

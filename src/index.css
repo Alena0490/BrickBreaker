@@ -73,6 +73,19 @@ body {
   padding-left: max(var(--space-lg), env(safe-area-inset-left));
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
 .game-overlay {
   position: fixed;
   display: none;
@@ -350,6 +363,14 @@ body {
   transition: transform 0.2s ease-in-out,  box-shadow 0.2s ease-in-out;
 }
 
+.overlay button:focus-visible,
+.speed button:focus-visible,
+.sound-button:focus-visible,
+.pause-button:focus-visible {
+  outline: 2px solid var(--cyan-middle);
+  outline-offset: 3px;
+}
+
 
 @media (hover: hover) {
   .speed button:hover,
@@ -393,6 +414,17 @@ body {
 @media (prefers-reduced-motion: reduce ) {
   .overlay button {
     animation: none;
+  }
+
+  .brick::after,
+  .brick--broken {
+    transition: none;
+  }
+
+  .speed button,
+  .sound-button,
+  .pause-button {
+    transition: none;
   }
 }
 

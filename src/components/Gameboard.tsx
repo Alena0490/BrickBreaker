@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import useSound from '../hooks/useSound'
 import { createBricks } from '../data/brickData'
 import type { Status } from '../types/types'
@@ -22,6 +22,8 @@ type GameboardProps = {
 }
 
 const isTouch = window.matchMedia('(pointer: coarse)').matches
+const isMotionReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 const statusText: Record<Status, { title: string; hint?: string }> = {
   ready: { 
     title: 'Ready', 
@@ -39,15 +41,15 @@ const statusText: Record<Status, { title: string; hint?: string }> = {
 const FX = {
   trail: {
     size: 7,               // radius of a new trail particle (px)
-    fade: 0.02,            // how fast it fades (larger = shorter trail)
+    fade: isMotionReduced ? 0.1 : 0.02,           // how fast it fades (larger = shorter trail)
     spread: 1,             // currently unused — trail particles do not move
-    glow: 25,              // glow strength
+    glow: isMotionReduced ? 5 : 25,              // glow strength
     glowColor: '#9ad5fa',  // glow color
-    headColor: '#aadcfb77',// color near the ball
+    headColor: isMotionReduced ? '#fafafa77' : '#aadcfb77',// color near the ball
     headUntil: 0.7,        // life threshold above which headColor is used
   },
   debris: {
-    count: 20,             // debris chunks spawned per broken brick
+    count: isMotionReduced ? 0 : 20,             // debris chunks spawned per broken brick
     speed: 6,              // how fast they fly out
     size: 4,               // debris chunk size (px)
     fade: 0.02,            // how fast they fade
@@ -71,6 +73,9 @@ const Gameboard = ({ speed, score, setLives, setScore, best, soundEnabled, statu
   const ballRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const brickRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+  const playAgainRef = useRef<HTMLButtonElement>(null);
+  const endTitleId = useId();
+  const endDescId = useId();
 
   const bricksStateRef = useRef(bricks);
   const livesRef = useRef(3);
@@ -86,6 +91,14 @@ const Gameboard = ({ speed, score, setLives, setScore, best, soundEnabled, statu
   useEffect(() => { bricksStateRef.current = bricks }, [bricks]);
   useEffect(() => { speedRef.current = speed }, [speed]);
   useEffect(() => { statusRef.current = status }, [status]);
+
+  // Move keyboard focus to the Play Again button when the game ends,
+  // so keyboard-only users land on the only available action.
+  useEffect(() => {
+    if (status === 'over' || status === 'win') {
+      playAgainRef.current?.focus()
+    }
+  }, [status]);
 
 
   useEffect(() => {
@@ -134,6 +147,10 @@ const Gameboard = ({ speed, score, setLives, setScore, best, soundEnabled, statu
       if (e.key === 'ArrowLeft') keys.left = true
       if (e.key === 'ArrowRight') keys.right = true
       if (e.code === 'Space') {
+        // Don't hijack Space when a button/link is focused — that breaks
+        // keyboard activation of UI controls like Play Again, pause, sound.
+        const target = e.target as HTMLElement | null
+        if (target?.closest('button, a, [role="button"]')) return
         e.preventDefault()
         const s = statusRef.current
         if (s === 'ready' || s === 'paused') changeStatus('playing')
@@ -400,18 +417,33 @@ const Gameboard = ({ speed, score, setLives, setScore, best, soundEnabled, statu
   }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit, changeStatus, onGameEnd ])
 
   const renderEndOverlay = (label: string, className: string) => (
-    <div className="overlay">
-      <span className={className}>{label}</span>
-      <span className="final-score">Score: {score}</span>
-      <span className='final-score high-score'>High Score: {best}</span>
-      <button onClick={onRestart}>Play Again</button>
+    <div
+      className="overlay"
+      role="dialog"
+      aria-labelledby={endTitleId}
+      aria-describedby={endDescId}
+    >
+      <span id={endTitleId} className={className}>{label}</span>
+      <span id={endDescId} className="visually-hidden">
+        Final score {score}. High score {best}.
+      </span>
+      <span className="final-score" aria-hidden={true}>Score: {score}</span>
+      <span className='final-score high-score' aria-hidden={true}>High Score: {best}</span>
+      <button ref={playAgainRef} onClick={onRestart}>Play Again</button>
     </div>
   )
 
+  // Live region for ready/paused only — over/win are announced by the
+  // dialog + focus shift, so including them here would duplicate.
+  const statusAnnouncement =
+    status === 'ready' ? `${statusText.ready.title}. ${statusText.ready.hint ?? ''}`
+    : status === 'paused' ? `${statusText.paused.title}. ${statusText.paused.hint ?? ''}`
+    : ''
+
   return (
     <div className="gameboard" ref={boardRef}>
-      <canvas ref={canvasRef} className="particles" />
-      <div className="bricks">
+      <canvas ref={canvasRef} className="particles" aria-hidden={true}/>
+      <div className="bricks" aria-hidden={true}>
         {bricks.map((brick) => (
           <Brick
             key={brick.id}
@@ -421,8 +453,12 @@ const Gameboard = ({ speed, score, setLives, setScore, best, soundEnabled, statu
           />
         ))}
       </div>
-      <Ball ref={ballRef} />
+      <Ball ref={ballRef}/>
       <Paddle ref={paddleRef} />
+
+      <div role="status" aria-live="polite" className="visually-hidden">
+        {statusAnnouncement}
+      </div>
 
       {(status === 'ready' || status === 'paused') && (
         <div className="overlay">

@@ -33,8 +33,9 @@ const App = () => {
     setSpeed((s) => Math.min(MAX_SPEED, Math.max(MIN_SPEED, s + delta)))
 
   return (
-    <div className="game-container">
-      <div className="game-overlay">
+    <main className="game-container">
+      <h1 className="visually-hidden">Brick Breaker</h1>
+      <div className="game-overlay" role="alert">
         <p>Please turn your device</p>
       </div>
       <Gameboard
@@ -60,7 +61,7 @@ const App = () => {
         status={status}
         setStatus={setStatus}
       />
-    </div>
+    </main>
   )
 }
 
