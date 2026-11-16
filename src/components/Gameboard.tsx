@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import useSound from './hooks/useSound'
+import useSound from '../hooks/useSound'
 import { createBricks } from '../data/brickData'
 import type { Status } from '../types/types'
 import Paddle from './Paddle'
@@ -10,11 +10,14 @@ import { checkBallBrickCollisions, buildBrickRectCache } from '../utils/collisio
 type GameboardProps = {
   speed: number;
   score: number;
+  best: number;
   setLives: (lives: number) => void;
   setScore: (score: number) => void;
   soundEnabled: boolean;
   status: Status;
   setStatus: (ready: Status) => void;
+  onRestart: () => void
+  onGameEnd: (finalScore: number) => void
   
 }
 
@@ -59,7 +62,7 @@ const MAX_DT = 3
 type Particle = { x: number; y: number; life: number }
 type Debris = { x: number; y: number; vx: number; vy: number; life: number; color: string }
 
-const Gameboard = ({ speed, score, setLives, setScore, soundEnabled, status, setStatus }: GameboardProps) => {
+const Gameboard = ({ speed, score, setLives, setScore, best, soundEnabled, status, setStatus, onRestart, onGameEnd }: GameboardProps) => {
   const [bricks, setBricks] = useState(createBricks)
 
   const { playWin, playBrickHit, playPaddleHit, playLose } = useSound({ soundEnabled });
@@ -83,6 +86,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled, status, set
   useEffect(() => { bricksStateRef.current = bricks }, [bricks]);
   useEffect(() => { speedRef.current = speed }, [speed]);
   useEffect(() => { statusRef.current = status }, [status]);
+
 
   useEffect(() => {
     const board = boardRef.current;
@@ -313,7 +317,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled, status, set
         setLives(livesRef.current)
         changeStatus(livesRef.current <= 0 ? 'over' : 'ready')
         resetBallToPaddle()
-        if (livesRef.current <=0) {playLose()}
+        if (livesRef.current <=0) {onGameEnd(scoreRef.current); playLose()}
         return
       }
 
@@ -334,6 +338,7 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled, status, set
 
         if (bricksStateRef.current.every((brick) => brick.broken)) {
           changeStatus('win');
+          onGameEnd(scoreRef.current);
           playWin();
         }
         playBrickHit();
@@ -392,13 +397,14 @@ const Gameboard = ({ speed, score, setLives, setScore, soundEnabled, status, set
       resizeObserver.disconnect()
       cancelAnimationFrame(frameId)
     }
-  }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit, changeStatus])
+  }, [setLives, setScore, playWin, playLose, playBrickHit, playPaddleHit, changeStatus, onGameEnd ])
 
   const renderEndOverlay = (label: string, className: string) => (
     <div className="overlay">
       <span className={className}>{label}</span>
       <span className="final-score">Score: {score}</span>
-      <button onClick={() => window.location.reload()}>Play Again</button>
+      <span className='final-score high-score'>High Score: {best}</span>
+      <button onClick={onRestart}>Play Again</button>
     </div>
   )
 

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react'
-import Win from '../../sounds/win.mp3'
-import Lose from '../../sounds/game-over.mp3'
-import BrickHit from '../../sounds/glass-break.mp3'
-import PaddleHit from '../../sounds/ball-hit.mp3'
+import Win from '../sounds/win.mp3'
+import Lose from '../sounds/game-over.mp3'
+import BrickHit from '../sounds/glass-break.mp3'
+import PaddleHit from '../sounds/ball-hit.mp3'
 
 const sounds = {
   win: new Audio(Win),
