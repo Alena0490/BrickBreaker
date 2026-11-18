@@ -22,14 +22,14 @@ const App = () => {
     setHighScore((prev) => Math.max(prev, finalScore))
   }, [setHighScore]);
 
-  const restart = () => {
+  const handleRestart = () => {
     setScore(0)
     setLives(3)
     setStatus('ready')
     setGameId((id) => id + 1)
   }
 
-  const changeSpeed = (delta: number) =>
+  const handleSpeedChange = (delta: number) =>
     setSpeed((s) => Math.min(MAX_SPEED, Math.max(MIN_SPEED, s + delta)))
 
   return (
@@ -47,7 +47,7 @@ const App = () => {
         soundEnabled={soundEnabled} 
         status={status}
         setStatus={setStatus}
-        onRestart={restart}
+        onRestart={handleRestart}
         best={best}
         onGameEnd={handleGameEnd}
       />
@@ -55,7 +55,7 @@ const App = () => {
         lives={lives} 
         score={score} 
         speed={speed} 
-        onSpeedChange={changeSpeed} 
+        onSpeedChange={handleSpeedChange} 
         soundEnabled={soundEnabled} 
         setSoundEnabled={setSoundEnabled} 
         status={status}
